@@ -1,73 +1,53 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <link rel="icon" type="image/x-icon" href="/favicon.ico">
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PDF Viewer</title>
-    <style>
-        #canvas-container {
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            text-align: center;
-        }
-        .pdf-page {
-            display: inline-block;
-            margin: 10px;
-            background-color: white;
-        }
-        .page-break {
-            page-break-before: always;
-        }
-    </style>
+  <title>PDF to Image Converter</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.9.359/pdf.min.js"></script>
+  <style>
+    #pdf-container {
+      width: 100%;
+      height: 100%;
+    }
+  </style>
 </head>
 <body>
-    <div id="canvas-container"></div>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            let urlParams = new URLSearchParams(window.location.search);
-            let pdfUrl = urlParams.get('pdfUrl');
+  <div id="pdf-container"></div>
+  <script>
+    // 获取url参数中的pdf文件地址
+    const urlParams = new URLSearchParams(window.location.search);
+    const pdfUrl = urlParams.get('pdf');
 
-            if (pdfUrl) {
-                showPDF(pdfUrl);
-                // 将PDF文件的URL存储在浏览器的历史记录中，同时在URL中不显示该PDF文件的实际URL地址
-                window.history.pushState({}, '', '/pdf-viewer');
-            } else {
-                alert('PDF URL not provided!');
-            }
-        });
+    // 加载PDF文件
+    pdfjsLib.getDocument(pdfUrl).promise.then(function(pdf) {
+      // 加载第一页
+      return pdf.getPage(1);
+    }).then(function(page) {
+      // 创建canvas元素
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext('2d');
+      const viewport = page.getViewport({ scale: 1 });
 
-        async function showPDF(url) {
-            const pdf = await pdfjsLib.getDocument(url).promise;
-            const numPages = pdf.numPages;
+      // 设置canvas大小
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
 
-            for (let i = 1; i <= numPages; i++) {
-                const page = await pdf.getPage(i);
+      // 渲染页面到canvas
+      page.render({
+        canvasContext: context,
+        viewport: viewport
+      }).promise.then(function() {
+        // 将canvas转换为图片
+        const dataURL = canvas.toDataURL('image/png');
 
-                const scale = 1.5;
-                const viewport = page.getViewport({ scale: scale });
+        // 创建图片元素
+        const img = document.createElement('img');
+        img.src = dataURL;
 
-                const canvas = document.createElement('canvas');
-                canvas.classList.add('pdf-page');
-                const context = canvas.getContext('2d');
-                canvas.height = viewport.height;
-                canvas.width = viewport.width;
-
-                const renderContext = {
-                    canvasContext: context,
-                    viewport: viewport,
-                };
-                await page.render(renderContext);
-
-                document.getElementById('canvas-container').appendChild(canvas);
-                if (i !== numPages) {
-                    document.getElementById('canvas-container').appendChild(document.createElement('div')).classList.add('page-break');
-                }
-            }
-        }
-    </script>
-    <img src="/kuluoluo.png" alt="Kuluoluo" style="display: block; margin: 0 auto; width: 300px; height: auto;">
+        // 将图片添加到页面
+        const pdfContainer = document.getElementById('pdf-container');
+        pdfContainer.appendChild(img);
+      });
+    });
+  </script>
 </body>
 </html>
