@@ -15,14 +15,8 @@
             margin: 0 auto;
             background-color: white;
         }
-        #pagination {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin-top: 10px;
-        }
-        #pagination button {
-            margin: 0 10px;
+        .page-break {
+            page-break-before: always;
         }
     </style>
 </head>
@@ -30,18 +24,8 @@
     <div id="canvas-container">
         <canvas id="pdf-canvas"></canvas>
     </div>
-    <div id="pagination">
-        <button id="prev-page">Previous</button>
-        <span id="current-page"></span>/<span id="total-pages"></span>
-        <button id="next-page">Next</button>
-    </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js"></script>
     <script>
-        let pdfDoc = null;
-        let pageNum = 1;
-        let pageRendering = false;
-        let pageNumPending = null;
-
         document.addEventListener('DOMContentLoaded', function() {
             let urlParams = new URLSearchParams(window.location.search);
             let pdfUrl = urlParams.get('pdfUrl');
@@ -51,30 +35,19 @@
             } else {
                 alert('PDF URL not provided!');
             }
-
-            document.getElementById('prev-page').addEventListener('click', showPrevPage);
-            document.getElementById('next-page').addEventListener('click', showNextPage);
         });
 
         async function showPDF(url) {
-            pdfDoc = await pdfjsLib.getDocument(url).promise;
-            document.getElementById('total-pages').textContent = pdfDoc.numPages;
+            const pdf = await pdfjsLib.getDocument(url).promise;
+            const numPages = pdf.numPages;
 
-            showPage(1);
-        }
+            for (let i = 1; i <= numPages; i++) {
+                const page = await pdf.getPage(i);
 
-        function showPage(pageNum) {
-            if (pageRendering) {
-                pageNumPending = pageNum;
-                return;
-            }
-            pageRendering = true;
-
-            pdfDoc.getPage(pageNum).then(function(page) {
                 const scale = 1.5;
                 const viewport = page.getViewport({ scale: scale });
 
-                const canvas = document.getElementById('pdf-canvas');
+                const canvas = document.createElement('canvas');
                 const context = canvas.getContext('2d');
                 canvas.height = viewport.height;
                 canvas.width = viewport.width;
@@ -83,31 +56,13 @@
                     canvasContext: context,
                     viewport: viewport,
                 };
-                return page.render(renderContext);
-            }).then(function() {
-                pageRendering = false;
-                if (pageNumPending !== null) {
-                    showPage(pageNumPending);
-                    pageNumPending = null;
+                await page.render(renderContext);
+
+                document.getElementById('canvas-container').appendChild(canvas);
+                if (i !== numPages) {
+                    document.getElementById('canvas-container').appendChild(document.createElement('div')).classList.add('page-break');
                 }
-                document.getElementById('current-page').textContent = pageNum;
-            });
-        }
-
-        function showPrevPage() {
-            if (pageNum <= 1) {
-                return;
             }
-            pageNum--;
-            showPage(pageNum);
-        }
-
-        function showNextPage() {
-            if (pageNum >= pdfDoc.numPages) {
-                return;
-            }
-            pageNum++;
-            showPage(pageNum);
         }
     </script>
 </body>
