@@ -6,14 +6,14 @@
     <title>PDF Viewer</title>
     <style>
         #canvas-container {
-            width: 600px;
-            height: 600px;
+            width: 100%;
+            height: 100%;
             overflow: auto;
-            margin: 0 auto;
+            text-align: center;
         }
-        #pdf-canvas {
-            display: block;
-            margin: 0 auto;
+        .pdf-page {
+            display: inline-block;
+            margin: 10px;
             background-color: white;
         }
         .page-break {
@@ -22,9 +22,7 @@
     </style>
 </head>
 <body>
-    <div id="canvas-container">
-        <canvas id="pdf-canvas"></canvas>
-    </div>
+    <div id="canvas-container"></div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -49,6 +47,7 @@
                 const viewport = page.getViewport({ scale: scale });
 
                 const canvas = document.createElement('canvas');
+                canvas.classList.add('pdf-page');
                 const context = canvas.getContext('2d');
                 canvas.height = viewport.height;
                 canvas.width = viewport.width;
