@@ -19,29 +19,37 @@
 
     // 加载PDF文件
     pdfjsLib.getDocument(pdfUrl).promise.then(function(pdf) {
-      // 加载第一页
-      return pdf.getPage(1);
-    }).then(function(page) {
-      // 创建canvas元素
-      const canvas = document.createElement("canvas");
-      const context = canvas.getContext('2d');
-      const viewport = page.getViewport({ scale: 1 });
+      const pages = [];
+      for (let i = 1; i <= pdf.numPages; i++) {
+        pages.push(i);
+      }
+      return Promise.all(pages.map(function(num) {
+        // 加载每一页
+        return pdf.getPage(num).then(function(page) {
+          // 创建canvas元素
+          const canvas = document.createElement("canvas");
+          const context = canvas.getContext('2d');
+          const viewport = page.getViewport({ scale: 1 });
 
-      // 设置canvas大小
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
+          // 设置canvas大小
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
 
-      // 渲染页面到canvas
-      page.render({
-        canvasContext: context,
-        viewport: viewport
-      }).promise.then(function() {
-        // 将canvas转换为图片
-        const dataURL = canvas.toDataURL('image/png');
-
-        // 创建图片元素
+          // 渲染页面到canvas
+          return page.render({
+            canvasContext: context,
+            viewport: viewport
+          }).promise.then(function() {
+            // 将canvas转换为图片
+            return canvas.toDataURL('image/png');
+          });
+        });
+      }));
+    }).then(function(images) {
+      // 创建图片元素
+      images.forEach(function(image) {
         const img = document.createElement('img');
-        img.src = dataURL;
+        img.src = image;
 
         // 将图片添加到页面
         const pdfContainer = document.getElementById('pdf-container');
