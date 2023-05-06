@@ -15,95 +15,100 @@
             margin: 0 auto;
             background-color: white;
         }
-        #prev-page, #next-page {
-            background-color: #4CAF50;
-            border: none;
-            color: white;
-            padding: 10px;
-            text-align: center;
-            text-decoration: none;
-            display: inline-block;
-            font-size: 16px;
-            margin: 10px;
+
+        button#prev-page, button#next-page {
+            background: linear-gradient(to bottom, #ffffff 0%, #e6e6e6 100%);
+            border: 1px solid #cccccc;
+            border-radius: 3px;
+            color: #333333;
             cursor: pointer;
+            font-size: 14px;
+            padding: 8px 12px;
+            text-decoration: none;
+            text-shadow: 0px 1px 0px #f2f2f2;
         }
-        #prev-page:hover, #next-page:hover {
-            background-color: #3e8e41;
+
+        button#prev-page:hover, button#next-page:hover {
+            box-shadow: 0px 1px 2px #cccccc;
         }
-        #prev-page:disabled, #next-page:disabled {
-            background-color: #cccccc;
-            cursor: default;
-        }
-        #prev-page {
+
+        button#prev-page {
             float: left;
+            margin-right: 10px;
         }
-        #next-page {
+
+        button#next-page {
             float: right;
-        }
-        .clearfix::after {
-            content: "";
-            clear: both;
-            display: table;
+            margin-left: 10px;
         }
     </style>
 </head>
 <body>
     <div id="canvas-container">
         <canvas id="pdf-canvas"></canvas>
-        <div id="page-num"></div>
     </div>
-    <div class="clearfix">
-        <button id="prev-page">Prev Page</button>
-        <button id="next-page">Next Page</button>
+    <div id="pagination">
+        <button id="prev-page">上一页</button>
+        <span id="current-page"></span>/<span id="total-pages"></span>
+        <button id="next-page">下一页</button>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js"></script>
     <script>
+        let pdfDoc = null;
+        let pageNum = 1;
+        let pageRendering = false;
+        let pageNumPending = null;
+
         document.addEventListener('DOMContentLoaded', function() {
             let urlParams = new URLSearchParams(window.location.search);
             let pdfUrl = urlParams.get('pdfUrl');
-            let pageNum = 1;
 
             if (pdfUrl) {
-                showPDF(pdfUrl, pageNum);
+                showPDF(pdfUrl);
             } else {
                 alert('PDF URL not provided!');
             }
 
-            document.getElementById('prev-page').addEventListener('click', function() {
-                if (pageNum <= 1) return;
-                pageNum--;
-                showPDF(pdfUrl, pageNum);
-            });
-
-            document.getElementById('next-page').addEventListener('click', function() {
-                if (pageNum >= pdf.numPages) return;
-                pageNum++;
-                showPDF(pdfUrl, pageNum);
-            });
+            document.getElementById('prev-page').addEventListener('click', showPrevPage);
+            document.getElementById('next-page').addEventListener('click', showNextPage);
         });
 
-        async function showPDF(url, pageNum) {
-            const pdf = await pdfjsLib.getDocument(url).promise;
-            const page = await pdf.getPage(pageNum);
+        async function showPDF(url) {
+            pdfDoc = await pdfjsLib.getDocument(url).promise;
+            document.getElementById('total-pages').textContent = pdfDoc.numPages;
 
-            const scale = 1.5;
-            const viewport = page.getViewport({ scale: scale });
-
-            const canvas = document.getElementById('pdf-canvas');
-            const context = canvas.getContext('2d');
-            canvas.height = viewport.height;
-            canvas.width = viewport.width;
-
-            const renderContext = {
-                canvasContext: context,
-                viewport: viewport,
-            };
-            await page.render(renderContext);
-
-            document.getElementById('page-num').textContent = `Page ${pageNum} of ${pdf.numPages}`;
-            document.getElementById('prev-page').disabled = pageNum <= 1;
-            document.getElementById('next-page').disabled = pageNum >= pdf.numPages;
+            showPage(1);
         }
-    </script>
-</body>
-</html>
+
+        function showPage(pageNum) {
+            if (pageRendering) {
+                pageNumPending = pageNum;
+                return;
+            }
+            pageRendering = true;
+
+            pdfDoc.getPage(pageNum).then(function(page) {
+                const scale = 1.5;
+                const viewport = page.getViewport({ scale: scale });
+
+                const canvas = document.getElementById('pdf-canvas');
+                const context = canvas.getContext('2d');
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+
+                const renderContext = {
+                    canvasContext: context,
+                    viewport: viewport,
+                };
+                return page.render(renderContext);
+            }).then(function() {
+                pageRendering = false;
+                if (pageNumPending !== null) {
+                    showPage(pageNumPending);
+                    pageNumPending = null;
+                }
+                document.getElementById('current-page').textContent = pageNum;
+            });
+        }
+
+        function show
