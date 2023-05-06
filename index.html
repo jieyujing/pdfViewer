@@ -21,84 +21,53 @@
     <div id="canvas-container">
         <canvas id="pdf-canvas"></canvas>
     </div>
-    <div id="pagination">
-        <button id="prev-page">Previous</button>
-        <span id="current-page"></span>/<span id="total-pages"></span>
-        <button id="next-page">Next</button>
-    </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js"></script>
     <script>
-        let pdfDoc = null;
-        let pageNum = 1;
-        let pageRendering = false;
-        let pageNumPending = null;
+        let pdf;
+        let currentPage = 1;
+        const scale = 1.5;
 
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
             let urlParams = new URLSearchParams(window.location.search);
             let pdfUrl = urlParams.get('pdfUrl');
 
             if (pdfUrl) {
-                showPDF(pdfUrl);
+                pdf = await pdfjsLib.getDocument(pdfUrl).promise;
+                showPDF(currentPage);
             } else {
                 alert('PDF URL not provided!');
             }
 
-            document.getElementById('prev-page').addEventListener('click', showPrevPage);
-            document.getElementById('next-page').addEventListener('click', showNextPage);
+            const container = document.getElementById('canvas-container');
+            container.addEventListener('scroll', function(e) {
+                const pageHeight = pdf.getPage(currentPage).then(function(page) {
+                    const viewport = page.getViewport({ scale: scale });
+                    return viewport.height;
+                });
+                const scrollTop = e.target.scrollTop;
+                const totalPages = pdf.numPages;
+                const containerHeight = container.clientHeight;
+                const remainingHeight = pageHeight - scrollTop - containerHeight;
+                if (remainingHeight < 0 && currentPage < totalPages) {
+                    currentPage++;
+                    showPDF(currentPage);
+                }
+            });
         });
 
-        async function showPDF(url) {
-            pdfDoc = await pdfjsLib.getDocument(url).promise;
-            document.getElementById('total-pages').textContent = pdfDoc.numPages;
+        async function showPDF(pageNumber) {
+            const page = await pdf.getPage(pageNumber);
+            const viewport = page.getViewport({ scale: scale });
+            const canvas = document.getElementById('pdf-canvas');
+            const context = canvas.getContext('2d');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
 
-            showPage(1);
-        }
-
-        function showPage(pageNum) {
-            if (pageRendering) {
-                pageNumPending = pageNum;
-                return;
-            }
-            pageRendering = true;
-
-            pdfDoc.getPage(pageNum).then(function(page) {
-                const scale = 1.5;
-                const viewport = page.getViewport({ scale: scale });
-
-                const canvas = document.getElementById('pdf-canvas');
-                const context = canvas.getContext('2d');
-                canvas.height = viewport.height;
-                canvas.width = viewport.width;
-
-                const renderContext = {
-                    canvasContext: context,
-                    viewport: viewport,
-                };
-                return page.render(renderContext);
-            }).then(function() {
-                pageRendering = false;
-                if (pageNumPending !== null) {
-                    showPage(pageNumPending);
-                    pageNumPending = null;
-                }
-                document.getElementById('current-page').textContent = pageNum;
-            });
-        }
-
-        function showPrevPage() {
-            if (pageNum <= 1) {
-                return;
-            }
-            pageNum--;
-            showPage(pageNum);
-        }
-
-        function showNextPage() {
-            if (pageNum >= pdfDoc.numPages) {
-                return;
-            }
-            pageNum++;
-            showPage(pageNum);
+            const renderContext = {
+                canvasContext: context,
+                viewport: viewport,
+            };
+            await page.render(renderContext);
         }
     </script>
 </body>
