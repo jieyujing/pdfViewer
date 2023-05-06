@@ -15,31 +15,14 @@
             margin: 0 auto;
             background-color: white;
         }
-
-        button#prev-page, button#next-page {
-            background: linear-gradient(to bottom, #ffffff 0%, #e6e6e6 100%);
-            border: 1px solid #cccccc;
-            border-radius: 3px;
-            color: #333333;
-            cursor: pointer;
-            font-size: 14px;
-            padding: 8px 12px;
-            text-decoration: none;
-            text-shadow: 0px 1px 0px #f2f2f2;
+        #pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 10px;
         }
-
-        button#prev-page:hover, button#next-page:hover {
-            box-shadow: 0px 1px 2px #cccccc;
-        }
-
-        button#prev-page {
-            float: left;
-            margin-right: 10px;
-        }
-
-        button#next-page {
-            float: right;
-            margin-left: 10px;
+        #pagination button {
+            margin: 0 10px;
         }
     </style>
 </head>
@@ -48,9 +31,9 @@
         <canvas id="pdf-canvas"></canvas>
     </div>
     <div id="pagination">
-        <button id="prev-page">上一页</button>
+        <button id="prev-page">Previous</button>
         <span id="current-page"></span>/<span id="total-pages"></span>
-        <button id="next-page">下一页</button>
+        <button id="next-page">Next</button>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js"></script>
     <script>
@@ -111,4 +94,21 @@
             });
         }
 
-        function show
+        function showPrevPage() {
+            if (pageNum <= 1) {
+                return;
+            }
+            pageNum--;
+            showPage(pageNum);
+        }
+
+        function showNextPage() {
+            if (pageNum >= pdfDoc.numPages) {
+                return;
+            }
+            pageNum++;
+            showPage(pageNum);
+        }
+    </script>
+</body>
+</html>
