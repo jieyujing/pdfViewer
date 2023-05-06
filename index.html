@@ -39,16 +39,15 @@
             }
 
             const container = document.getElementById('canvas-container');
-            container.addEventListener('scroll', function(e) {
-                const pageHeight = pdf.getPage(currentPage).then(function(page) {
-                    const viewport = page.getViewport({ scale: scale });
-                    return viewport.height;
-                });
+            container.addEventListener('scroll', async function(e) {
+                const page = await pdf.getPage(currentPage);
+                const viewport = page.getViewport({ scale: scale });
+                const pageHeight = viewport.height;
                 const scrollTop = e.target.scrollTop;
                 const totalPages = pdf.numPages;
                 const containerHeight = container.clientHeight;
                 const remainingHeight = pageHeight - scrollTop - containerHeight;
-                if (remainingHeight < 0 && currentPage < totalPages) {
+                if (remainingHeight <= 0 && currentPage < totalPages) {
                     currentPage++;
                     showPDF(currentPage);
                 }
