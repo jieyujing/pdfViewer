@@ -15,48 +15,80 @@
             margin: 0 auto;
             background-color: white;
         }
+        #prev-page, #next-page {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 10px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 10px;
+            cursor: pointer;
+        }
+        #prev-page:hover, #next-page:hover {
+            background-color: #3e8e41;
+        }
+        #prev-page:disabled, #next-page:disabled {
+            background-color: #cccccc;
+            cursor: default;
+        }
+        #prev-page {
+            float: left;
+        }
+        #next-page {
+            float: right;
+        }
+        .clearfix::after {
+            content: "";
+            clear: both;
+            display: table;
+        }
     </style>
 </head>
 <body>
     <div id="canvas-container">
         <canvas id="pdf-canvas"></canvas>
+        <div id="page-num"></div>
+    </div>
+    <div class="clearfix">
+        <button id="prev-page">Prev Page</button>
+        <button id="next-page">Next Page</button>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js"></script>
     <script>
-        let pdf;
-        let currentPage = 1;
-        const scale = 1.5;
-
-        document.addEventListener('DOMContentLoaded', async function() {
+        document.addEventListener('DOMContentLoaded', function() {
             let urlParams = new URLSearchParams(window.location.search);
             let pdfUrl = urlParams.get('pdfUrl');
+            let pageNum = 1;
 
             if (pdfUrl) {
-                pdf = await pdfjsLib.getDocument(pdfUrl).promise;
-                showPDF(currentPage);
+                showPDF(pdfUrl, pageNum);
             } else {
                 alert('PDF URL not provided!');
             }
 
-            const container = document.getElementById('canvas-container');
-            container.addEventListener('scroll', async function(e) {
-                const page = await pdf.getPage(currentPage);
-                const viewport = page.getViewport({ scale: scale });
-                const pageHeight = viewport.height;
-                const scrollTop = e.target.scrollTop;
-                const totalPages = pdf.numPages;
-                const containerHeight = container.clientHeight;
-                const remainingHeight = pageHeight - scrollTop - containerHeight;
-                if (remainingHeight <= 0 && currentPage < totalPages) {
-                    currentPage++;
-                    showPDF(currentPage);
-                }
+            document.getElementById('prev-page').addEventListener('click', function() {
+                if (pageNum <= 1) return;
+                pageNum--;
+                showPDF(pdfUrl, pageNum);
+            });
+
+            document.getElementById('next-page').addEventListener('click', function() {
+                if (pageNum >= pdf.numPages) return;
+                pageNum++;
+                showPDF(pdfUrl, pageNum);
             });
         });
 
-        async function showPDF(pageNumber) {
-            const page = await pdf.getPage(pageNumber);
+        async function showPDF(url, pageNum) {
+            const pdf = await pdfjsLib.getDocument(url).promise;
+            const page = await pdf.getPage(pageNum);
+
+            const scale = 1.5;
             const viewport = page.getViewport({ scale: scale });
+
             const canvas = document.getElementById('pdf-canvas');
             const context = canvas.getContext('2d');
             canvas.height = viewport.height;
@@ -67,6 +99,10 @@
                 viewport: viewport,
             };
             await page.render(renderContext);
+
+            document.getElementById('page-num').textContent = `Page ${pageNum} of ${pdf.numPages}`;
+            document.getElementById('prev-page').disabled = pageNum <= 1;
+            document.getElementById('next-page').disabled = pageNum >= pdf.numPages;
         }
     </script>
 </body>
